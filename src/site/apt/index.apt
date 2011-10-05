@@ -1,0 +1,308 @@
+ExpressionTracer 1.3
+
+    An Introscope tracer-type that can evaluate an {{{http://www.opensymphony.com/ognl/}OGNL}} invocation
+    expression on the instrumented object or any of its method arguments or return value.
+
+    The idea is to provide a convenient way to retrieve business related metric values, such as the number of
+    task jobs, generated reports, bets and more.
+
+* Requirements
+
+    This Java library is an agent-side plug-in for CA-Wily Introscope. Introscope is a commercial tool for
+    application performance management (APM) of (large) Java applications in production. In order to use
+    and/or compile this library you need to have a valid Introscope license. For compilation, a valid Agent.jar
+    file is required as well. You will need to manually install this JAR file into your local Maven cache,
+    using the instructions in the POM file of this project.
+
+    This library has been developed and tested using Introscope version 8 (but also version 7 and version 6).
+
+Usage
+
+    Given the following test application
+
++----
+public class TargetApplication {
+    public static void main(String[] args) {
+        TargetApplication   app = new  TargetApplication(args);
+        app.run();
+    }
+
+    private int     N         = 60;
+    private long    sleepTime = 1000;
+    private List    lst       = new ArrayList();
+    private Random  r         = new Random();
+
+    public TargetApplication(String[] args) {
+        for (int i = 0; i < args.length; i++) {
+            String arg = args[i];
+            if (arg.startsWith("-n")) {
+                N         = Integer.parseInt(args[++i]);
+            } else if (arg.startsWith("-t")) {
+                sleepTime = Integer.parseInt(args[++i]);
+            }
+        }
+    }
+
+    public void     run() {
+        for (int k=0; k<N; ++k) {
+            compute(lst);
+        }
+    }
+
+    public void     compute(List lst) {
+        Integer  num = getNumber();
+        lst.add(num);
+        System.out.println("[" + lst.size() + "] num = " + num);
+        try {
+            Thread.sleep(sleepTime);
+        } catch (InterruptedException e) {}
+    }
+
+    public Integer     getNumber() {
+        return Integer.valueOf(r.nextInt(1000));
+    }
+}
++----
+
+    By using the PBD below is is possible to read the value of the List object sent to compute and invoke the
+    getNumber() method of the instrumented (target) object.
+
++----
+SetTracerClassMapping:  T     com.ribomation.expression_tracer.ExpressionTracer  com.wily.introscope.probebuilder.validate.MetricNameValidator
+
+TraceOneMethodWithParametersOfClass:   target.Application  compute  T  "ExpressionTracer:Number=this.getNumber()"
+TraceOneMethodWithParametersOfClass:   target.Application  compute  T  "ExpressionTracer:List Size=$1.size()"
++----
+
+    This will then result in two metrics, as shown in the figure below.
+
+[img/expression-metrics.png]
+
+Installation
+
+    Unpack the distribution file and copy
+
+        * ExpressionTracer-1.3.jar to the $INTROSCOPE_AGENT/ext/ directory
+
+        * ExpressionTracer.pbd to the $INTROSCOPE_AGENT/ directory
+
+    Add the PBD name to the <<<introscope.autoprobe.directivesFile>>> property of the agent profile.
+
+Configuration
+
+    The PBD file defines the tracer type and the instrumentation points. The metric tracer directive used must
+    be <<<TraceOneMethodWithParametersOfClass>>>, because arguments and return values need to be available.
+
+    The metric name is subdivided into the name part and the expression part, and they are separated by an
+    equals sign (<<<=>>>). The expression part is subdivided into a target part and an OGNL part, and they are
+    separated by a dot (<<<.>>>).
+
+    The target part must be one of
+
+        * <this> - the instrumented object itself
+
+        * <$0> - the returned value object, from the instrumented method
+
+        * <$n> - the n:th argument object (i.e. $1, $2, $3, ...), of the instrumented method
+
+    The expression is any valid OGNL expression. OGNL has a very intuitive syntax (close to Java's) for common cases.
+    Please, read the {{{http://www.ognl.org/2.6.7/Documentation/html/LanguageGuide/index.html}OGNL Language Guide}}
+    for more information.
+
+    It is possible to leave out the expression part (including the '.'), e.g. simply just <<<$1>>>. Depending on the metric
+    type the value will be coerced to a numeric value (longValue) or a text string (toString).
+
+* Advanced configuration
+
+    It is possible to change the metric type and also let the last value be retained, by adding a tracer parameter.
+    There are several types that aggregate captured values over an Introscope period.
+
+        * <<<average>>> - performs an average
+
+        * <<<sum>>> - performs a sum
+
+        * <<<counter>>> - interval counter. Increments every time its OGNL expression evaluates to true.
+
+        * <<<last>>> - reports the last captured value in the period
+
+        * <<<text>>> - reports a text value (last value)
+
+    The table below shows the set of tracer parameters.
+
+*--------+---------------------+---------------------+
+| <<Tracer Parameter>> | <<Default>> | <<Description>>
+*--------+---------------------+---------------------+
+| <<<metricType>>> | average | Sets the metric type. Values must be any of {<<<average>>>, <<<sum>>>, <<<counter>>>, <<<last>>>, <<<text>>>}.
+*--------+---------------------+---------------------+
+| <<<retainLastValue>>> | false | If the last captured value should be retained until a new value is captured. Use if the sampling frequency is less than every 15 seconds.
+*--------+---------------------+---------------------+
+
+    Here is a sample PBD, that illustrates the idea.
+
++----
+SetTracerClassMapping:  ET_avg     com.ribomation.expression_tracer.ExpressionTracer  com.wily.introscope.probebuilder.validate.MetricNameValidator
+SetTracerParameter:     ET_avg     metricType     average
+
+SetTracerClassMapping:  ET_sum     com.ribomation.expression_tracer.ExpressionTracer  com.wily.introscope.probebuilder.validate.MetricNameValidator
+SetTracerParameter:     ET_sum     metricType     sum
+
+TraceOneMethodWithParametersOfClass:   target.Application  compute    ET_avg     "ExpressionTracer|Number:Average=this.getNumber()"
+TraceOneMethodWithParametersOfClass:   target.Application  compute    ET_sum     "ExpressionTracer|Number:Sum=this.getNumber()"
++----
+
+    Here is another PBD that shows usage of the retain value feature.
+    
++----
+SetTracerClassMapping:  ET_retain   com.ribomation.expression_tracer.ExpressionTracer  com.wily.introscope.probebuilder.validate.MetricNameValidator
+SetTracerParameter:     ET_retain   metricType          average
+SetTracerParameter:     ET_retain   retainLastValue     true
+
+TraceOneMethodWithParametersOfClass:   target.Application  whatever   ET_retain     "ExpressionTracer:Whatever retained=$1.intValue()"
++----
+
+* External Expressions
+
+    Only trivial expressions can be written as part of the metric name within the PBD. More complex expressions are
+    rejected by the agent's PBD parser. In these cases, the expression can be externalised into a separate file in the
+    agent directory.
+
+    [[1]] Create a regular Java properties file named <<<ExpressionTracer.properties>>> in the agent directory.
+
+    [[2]] Add the expressions as normal properties, where the property name is its ID and the property value
+    is the complete OGNL expression.
+
+    [[3]] Within the PBD, refer to the external expression using '@' and its name.
+
+** ExpressionTracer.properties
+
+----
+otherIssuer=$0.(#issuer = #this, !(#issuer.startsWith(\"NORDEA\")  || #issuer.startsWith(\"BIDT\")))
+----
+
+** ExpressionTracer.pbd
+
+----
+SetTracerClassMapping:  ExpressionTracer_Counter     com.ribomation.expression_tracer.ExpressionTracer  com.wily.introscope.probebuilder.validate.MetricNameValidator
+SetTracerParameter:     ExpressionTracer_Counter     metricType     counter
+
+TraceOneMethodWithParametersOfClass:   se.nordicedge.CertificateParser  getCAType    ExpressionTracer_Counter     "NordicEdge|Cert Issuer:Nordea=$0.startsWith(\"NORDEA\")"
+TraceOneMethodWithParametersOfClass:   se.nordicedge.CertificateParser  getCAType    ExpressionTracer_Counter     "NordicEdge|Cert Issuer:BankID=$0.startsWith(\"BIDT\")"
+TraceOneMethodWithParametersOfClass:   se.nordicedge.CertificateParser  getCAType    ExpressionTracer_Counter     "NordicEdge|Cert Issuer:Other=@otherIssuer"
+----
+
+Screen shots
+
+* Average metric
+
++----
+SetTracerClassMapping:  ET_avg     com.ribomation.expression_tracer.ExpressionTracer  com.wily.introscope.probebuilder.validate.MetricNameValidator
+SetTracerParameter:     ET_avg     metricType     average
+TraceOneMethodWithParametersOfClass:   target.Application  compute    ET_avg     "ExpressionTracer:List size (avg)=$1.size()"
++----
+
+[img/average.png]
+
+* Text metric
+
++----
+SetTracerClassMapping:  ET_text     com.ribomation.expression_tracer.ExpressionTracer  com.wily.introscope.probebuilder.validate.MetricNameValidator
+SetTracerParameter:     ET_text     metricType     text
+TraceOneMethodWithParametersOfClass:   target.Application  print      ET_text    "ExpressionTracer:Print message=$1"
++----
+
+[img/text.png]
+
+* Simple return value
+
++----
+TraceOneMethodWithParametersOfClass:   target.Application  getNumber   ET_avg        "ExpressionTracer:Return=$0"
++----
+
+[img/return.png]
+
+* Retained metric
+
++----
+SetTracerClassMapping:  ET_no_retain   com.ribomation.expression_tracer.ExpressionTracer  com.wily.introscope.probebuilder.validate.MetricNameValidator
+SetTracerParameter:     ET_no_retain   metricType          average
+
+SetTracerClassMapping:  ET_retain      com.ribomation.expression_tracer.ExpressionTracer  com.wily.introscope.probebuilder.validate.MetricNameValidator
+SetTracerParameter:     ET_retain      metricType          average
+SetTracerParameter:     ET_retain      retainLastValue     true
+
+TraceOneMethodWithParametersOfClass:   target.Application  whatever   ET_no_retain  "ExpressionTracer:Whatever=$1.intValue()"
+TraceOneMethodWithParametersOfClass:   target.Application  whatever   ET_retain     "ExpressionTracer:Whatever retained=$1.intValue()"
++----
+
+[img/retained.png]
+
+* Sample program
+
++----
+package target;
+import java.util.List;
+import java.util.ArrayList;
+import java.util.Random;
+
+public class Application {
+    public static void main(String[] args) {
+        Application app = new Application(args);
+        app.run();
+    }
+
+    private int     N         = 1000;
+    private long    sleepTime = 1000;
+    private List    lst       = new ArrayList();
+    private Random  r         = new Random();
+
+    public Application(String[] args) {
+        for (int i = 0; i < args.length; i++) {
+            String arg = args[i];
+            if (arg.startsWith("-n")) {
+                N         = Integer.parseInt(args[++i]);
+            } else if (arg.startsWith("-t")) {
+                sleepTime = Integer.parseInt(args[++i]);
+            }
+        }
+    }
+
+    public void     run() {
+        for (int k = 0; k <= N; ++k) {
+            compute(lst);
+            if (k % 60 == 0) whatever( getNumber() );
+        }
+    }
+
+    public void     compute(List lst) {
+        Integer  num = getNumber();
+        lst.add(num);
+        print("list.size=" + lst.size() + ", num=" + num);
+        try {
+            Thread.sleep(sleepTime);
+        } catch (InterruptedException e) {}
+    }
+
+    public void     print(String msg) {
+        System.out.println("[target.Application] " + msg);
+    }
+
+    public void     whatever(Integer n) {
+        System.out.println("[target.Application#whatever()] n=" + n);
+    }
+
+    public Integer     getNumber() {
+        return new Integer(r.nextInt(1000));
+    }
+}
++----
+
+
+* Author
+
+*-----------+--------------------------------------------------------------------+
+|| Name     | Jens Riboe                                                         |
+*-----------+--------------------------------------------------------------------+
+|| Email    | {{{mailto:jens.riboe@ribomation.com}jens.riboe@ribomation.com}}    |
+*-----------+--------------------------------------------------------------------+
+|| Web      | {{http://blog.ribomation.com/introscope/expression-tracer}}        |
+*-----------+--------------------------------------------------------------------+
