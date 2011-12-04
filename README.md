@@ -12,3 +12,6 @@ application performance management (APM) of (large) Java applications in product
 and/or compile this library you need to have a valid Introscope license. For compilation, a valid Agent.jar
 file is required as well. You will need to manually install this JAR file into your local Maven cache,
 using the instructions in the POM file of this project. This library has been developed and tested using Introscope version 8
+
+The current version is 1.4
+
