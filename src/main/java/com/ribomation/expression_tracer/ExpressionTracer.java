@@ -14,6 +14,7 @@ import com.wily.util.StringUtils;
 import com.wily.util.heartbeat.ITimestampedRunnable;
 import com.wily.util.heartbeat.IntervalHeartbeat;
 import com.ribomation.expression_tracer.recorders.RecorderFactory;
+import com.wily.util.properties.IndexedProperties;
 
 import java.io.*;
 import java.util.Properties;
@@ -38,26 +39,16 @@ public class ExpressionTracer extends ASingleMetricTracerFactory implements ITim
      */
     public ExpressionTracer(IAgent agent, AttributeListing props, ProbeIdentification probeId, Object target) {
         super(agent, props, probeId, target);
+        log = new SimpleModuleFeedbackChannel(agent.IAgent_getModuleFeedback(), module.getName());
 
-        log    = new SimpleModuleFeedbackChannel(agent.IAgent_getModuleFeedback(), module.getName());
-
-        File        agentDir = new File( agent.IAgent_getConfigurationResource().IResource_getLocation() ).getParentFile();
-        File        cfgFile  = new File(agentDir, "ExpressionTracer.properties");
-        Properties  cfg      = new Properties();
-        if (cfgFile.canRead()) {
-            try {
-                InputStream in = new FileInputStream(cfgFile);
-                cfg.load(in);
-                cfg.clone();
-                log.verbose("External Expressions = " + cfg);
-            } catch (Exception e) {
-                log.warn("Failed to read config file: "+cfgFile, e);
-            }
-        }
+        IndexedProperties   agentProperties = agent.IAgent_getIndexedProperties();
+        String              expressionsFilename = agentProperties.getTrimmedProperty("ExpressionTracer.file", "ExpressionTracer.properties");
+        File                agentDir = new File( agent.IAgent_getConfigurationResource().IResource_getLocation() ).getParentFile();
+        Properties          expressions = loadExpressions(expressionsFilename, agentDir);
 
         String metricFullName = getNameParameter();
         log.verbose("Input = " + metricFullName);
-        expr   = new ExpressionHolder(metricFullName, cfg);
+        expr   = new ExpressionHolder(metricFullName, expressions);
         log.verbose("Expression = " + expr);
 
         String   mName           = new DefaultNameFormatter().ICachedNameFormatter_format(expr.getMetricName(), probeId, target);
@@ -78,6 +69,27 @@ public class ExpressionTracer extends ASingleMetricTracerFactory implements ITim
                     IntervalHeartbeat.kRunFirst
             );
         }
+    }
+    
+    private Properties  loadExpressions(String filename, File agentDir) {
+        File f = new File(filename);
+        if (!f.isAbsolute()) {
+            f = new File(agentDir, filename);
+        }
+        
+        if (f.canRead()) {
+            try {
+                Properties p = new Properties();
+                InputStream in = new FileInputStream(f);
+                p.load(in);
+                in.close();
+                return p;
+            } catch (Exception e) {
+                log.warn("Failed to read config file: " + f, e);
+            }
+        }
+        
+        return new Properties();
     }
 
     /**

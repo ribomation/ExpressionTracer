@@ -39,7 +39,7 @@ public class ExpressionHolder {
     private String                  expression;
     private int                     targetIdx;
     private Object                  ognlExpr;
-    private Properties              externalExpression = new Properties();
+//    private Properties              externalExpression = new Properties();
 
     /**
      * Do nothing constructor for unit testing.
@@ -47,9 +47,9 @@ public class ExpressionHolder {
     protected ExpressionHolder() {
     }
 
-    public ExpressionHolder(String metricName, Properties cfg) {
+    public ExpressionHolder(String metricName, Properties expressions) {
         this.metricName = metricName;
-        this.externalExpression = cfg;
+//        this.externalExpression = cfg;
 
         // name=expr
         String[]    comps = metricName.split(METRIC_SEP, 2);
@@ -59,10 +59,13 @@ public class ExpressionHolder {
 
         if (this.expression.startsWith("@")) {
             String exprName = this.expression.substring(1);
-            String expr = externalExpression.getProperty(exprName);
-            if (expr != null) {
-                this.expression = expr;
+            if (expressions.containsKey(exprName)) {
+                this.expression = expressions.getProperty(exprName);
             }
+//            String expr = externalExpression.getProperty(exprName);
+//            if (expr != null) {
+//                this.expression = expr;
+//            }
         }
 
         // $0.getValue()
@@ -129,10 +132,13 @@ public class ExpressionHolder {
         try {
             Map ctx = Ognl.createDefaultContext(target);
             Ognl.setMemberAccess(ctx, new DefaultMemberAccess(true));
+            ctx.put("_", new OgnlCollectionAggregator());
 
             return Ognl.getValue(ognlExpr, ctx, target);
         } catch (OgnlException e) {
             throw new FailedEvaluation(metricName, expression, target, e);
+        } catch (Throwable t) {
+            throw new FailedEvaluation(metricName, expression, target, t);
         }
     }
 

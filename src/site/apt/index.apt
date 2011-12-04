@@ -1,6 +1,6 @@
-ExpressionTracer 1.3
+ExpressionTracer 1.4
 
-    An Introscope tracer-type that can evaluate an {{{http://www.opensymphony.com/ognl/}OGNL}} invocation
+    An Introscope tracer-type that can evaluate an {{{http://commons.apache.org/ognl/index.html}} invocation
     expression on the instrumented object or any of its method arguments or return value.
 
     The idea is to provide a convenient way to retrieve business related metric values, such as the number of
@@ -106,7 +106,7 @@ Configuration
         * <$n> - the n:th argument object (i.e. $1, $2, $3, ...), of the instrumented method
 
     The expression is any valid OGNL expression. OGNL has a very intuitive syntax (close to Java's) for common cases.
-    Please, read the {{{http://www.ognl.org/2.6.7/Documentation/html/LanguageGuide/index.html}OGNL Language Guide}}
+    Please, read the {{{http://commons.apache.org/ognl/language-guide.html}OGNL Language Guide}}
     for more information.
 
     It is possible to leave out the expression part (including the '.'), e.g. simply just <<<$1>>>. Depending on the metric

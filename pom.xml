@@ -21,7 +21,7 @@
     <!-- ================================================= -->
     <groupId>ribomation</groupId>
     <artifactId>ExpressionTracer</artifactId>
-    <version>1.3</version>
+    <version>1.4</version>
     <packaging>jar</packaging>
 
 
@@ -87,7 +87,7 @@
     <distributionManagement>
         <site>
             <id>ribomation</id>
-            <url>scp://lib.ribomation.com/docs/ExpressionTracer/</url>
+            <url>scp://lib.ribomation.com/docs/${project.name}</url>
         </site>
     </distributionManagement>
     

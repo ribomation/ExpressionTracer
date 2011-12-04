@@ -2,6 +2,9 @@ package com.ribomation.expression_tracer;
 
 import junit.framework.TestCase;
 
+import java.util.Arrays;
+import java.util.List;
+
 /**
  * Unit test of class ExpressionHolder.
  */
@@ -12,10 +15,10 @@ public class ExpressionHolder_Test extends TestCase {
     // ----------------------------------------------------------
 
     public void     test_getTargetIndex() {
-        assertEquals("this"  , -1, target.getTargetIndex("this"));
-        assertEquals("return",  0, target.getTargetIndex("$0"));
-        assertEquals("arg-1" ,  1, target.getTargetIndex("$1"));
-        assertEquals("arg-2" ,  2, target.getTargetIndex("$2"));
+        assertEquals("this", -1, target.getTargetIndex("this"));
+        assertEquals("return", 0, target.getTargetIndex("$0"));
+        assertEquals("arg-1", 1, target.getTargetIndex("$1"));
+        assertEquals("arg-2", 2, target.getTargetIndex("$2"));
 
         try {
             target.getTargetIndex("");
@@ -81,6 +84,33 @@ public class ExpressionHolder_Test extends TestCase {
         assertEquals("eval", "B", target.eval("FooBar").toString());
     }
 
+    public void testAggregator_SUM() throws Exception {
+        List<Integer> integers = Arrays.asList(10, 20, 30);
+        String metric = "Root|Sub:Metric=this.( #_.SUM(#this) )";
+        target = new ExpressionHolder(metric);
+        assertEquals("eval", 60L, target.eval(integers));
+    }
+    
+    public void testAggregator_PROD() throws Exception {
+        List<Integer> integers = Arrays.asList(1,2,3,4,5);
+        String metric = "Root|Sub:Metric=this.( #_.PROD(#this) )";
+        target = new ExpressionHolder(metric);
+        assertEquals("eval", 120L, target.eval(integers));
+    }
+    
+    public void testAggregator_MIN() throws Exception {
+        List<Integer> integers = Arrays.asList(10,20,5,30,40);
+        String metric = "Root|Sub:Metric=this.( #_.MIN(#this) )";
+        target = new ExpressionHolder(metric);
+        assertEquals("eval", 5L, target.eval(integers));
+    }
+    
+    public void testAggregator_MAX() throws Exception {
+        List<Integer> integers = Arrays.asList(10,20,50,30,40);
+        String metric = "Root|Sub:Metric=this.( #_.MAX(#this) )";
+        target = new ExpressionHolder(metric);
+        assertEquals("eval", 50L, target.eval(integers));
+    }
 
     // ----------------------------------------------------------
     // Helpers
