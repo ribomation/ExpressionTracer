@@ -36,6 +36,8 @@
 
     <target name="create.agent">
         <mkdir dir="${agent.dir}"/>
+        <mkdir dir="${agent.dir}/logs"/>
+        
         <copy todir="${agent.dir}">
             <fileset dir="${introscope.dir}"/>
         </copy>

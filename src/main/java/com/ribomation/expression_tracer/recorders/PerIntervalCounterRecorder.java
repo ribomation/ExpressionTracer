@@ -10,7 +10,7 @@ import com.wily.introscope.agent.stat.ILongIntervalCounterDataAccumulator;
 public class PerIntervalCounterRecorder extends AbstractRecorder {
     public PerIntervalCounterRecorder(DataAccumulatorFactory f, String name) {
         super(f, name);
-        setLast(new Long(0));
+        setLast((long) 0);
     }
 
     protected IDataAccumulator create(DataAccumulatorFactory f, String name) throws Exception {
@@ -18,11 +18,12 @@ public class PerIntervalCounterRecorder extends AbstractRecorder {
     }
 
     protected void add(IDataAccumulator metric, Object value) {
-        if (toBool(value)) {
+        if (value instanceof Number) {
+            Number n = (Number) value;
+            ((ILongIntervalCounterDataAccumulator) metric).ILongIntervalCounterDataAccumulator_addBatchIncidents(n.longValue());
+        } else if (toBool(value)) {
             ((ILongIntervalCounterDataAccumulator) metric).ILongIntervalCounterDataAccumulator_addSingleIncident();
         }
-
-//        ((ILongIntervalCounterDataAccumulator) metric).ILongIntervalCounterDataAccumulator_addBatchIncidents(toLong(value));
     }
 
 }

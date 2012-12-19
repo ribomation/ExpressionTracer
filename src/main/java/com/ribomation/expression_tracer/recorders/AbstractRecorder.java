@@ -33,10 +33,6 @@ public abstract class AbstractRecorder implements Recorder {
         setLast(value);
     }
 
-    public void addLast() {
-        add(getMetric(), lastValue);
-    }
-
     protected void  setLast(Object v) {
         lastValue = v;
     }

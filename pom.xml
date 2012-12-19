@@ -21,18 +21,29 @@
     <!-- ================================================= -->
     <groupId>ribomation</groupId>
     <artifactId>ExpressionTracer</artifactId>
-    <version>1.4</version>
+    <version>1.5</version>
     <packaging>jar</packaging>
 
-
+    <!-- ================================================= -->
+    <!-- PROPERTIES -->
+    <!-- ================================================= -->
+    <properties>
+        <javaVersion>1.5</javaVersion>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <maven.build.timestamp.format>yyyy-MM-dd_HH:mm</maven.build.timestamp.format>
+        <entry.class>com.ribomation.expression_tracer.ExpressionTracer</entry.class>
+        <author.name>Jens Riboe</author.name>
+        <author.email>jens.riboe@ribomation.com</author.email>
+    </properties>
+    
     <!-- ================================================= -->
     <!-- DEVELOPERS -->
     <!-- ================================================= -->
     <developers>
         <developer>
             <id>jens</id>
-            <name>Jens Riboe</name>
-            <email>jens.riboe@ribomation.com</email>
+            <name>${author.name}</name>
+            <email>${author.email</email>
             <url>http://blog.ribomation.com/</url>
             <organization>Ribomation</organization>
             <organizationUrl>http://www.ribomation.com/</organizationUrl>
@@ -94,11 +105,6 @@
     <!-- ================================================= -->
     <!-- BUILD -->
     <!-- ================================================= -->
-    <properties>
-        <javaVersion>1.5</javaVersion>
-        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    </properties>
-
     <build>
         <plugins>
             <plugin>
@@ -133,9 +139,10 @@
                 <configuration>
                     <archive>
                         <manifestEntries>
+                            <Built-By>${author.name}, ${author.email}</Built-By>
                             <com-wily-Name>${project.name}</com-wily-Name>
-                            <com-wily-Release>6.1.P2</com-wily-Release>
-                            <com-wily-Build>260421</com-wily-Build>
+                            <com-wily-Release>${project.version}</com-wily-Release>
+                            <com-wily-Build>${maven.build.timestamp}</com-wily-Build>
 
                             <com-wily-Extension-Name>${project.name}</com-wily-Extension-Name>
                             <com-wily-Extension-Type>Introscope-Agent</com-wily-Extension-Type>
@@ -145,7 +152,7 @@
                             <com-wily-Extension-Plugin-tracer-Name>${project.name}</com-wily-Extension-Plugin-tracer-Name>
                             <com-wily-Extension-Plugin-tracer-Type>tracer</com-wily-Extension-Plugin-tracer-Type>
                             <com-wily-Extension-Plugin-tracer-Version>1</com-wily-Extension-Plugin-tracer-Version>
-                            <com-wily-Extension-Plugin-tracer-Entry-Point-Class>com.ribomation.expression_tracer.ExpressionTracer</com-wily-Extension-Plugin-tracer-Entry-Point-Class>
+                            <com-wily-Extension-Plugin-tracer-Entry-Point-Class>${entry.class}</com-wily-Extension-Plugin-tracer-Entry-Point-Class>
                         </manifestEntries>
                     </archive>
                 </configuration>

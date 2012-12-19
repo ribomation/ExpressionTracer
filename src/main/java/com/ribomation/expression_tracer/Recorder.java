@@ -22,10 +22,5 @@ public interface Recorder {
      */
     String      getType();
 
-    /**
-     * Re-records the last value.
-     */
-    void        addLast();
-
     Object   getLast();
 }

@@ -23,12 +23,12 @@ import java.util.Properties;
  * A tracer that can evaluate an OGNL invocation expression on the instrumented object or
  * any of its method arguments or return value.
  */
-public class ExpressionTracer extends ASingleMetricTracerFactory implements ITimestampedRunnable {
-    private Module                          module = new Module("ExpressionTracer");
+public class ExpressionTracer extends ASingleMetricTracerFactory {
     private IModuleFeedbackChannel          log;
     private ExpressionHolder                expr;
     private Recorder                        recorder;
     private AtomicLatch                     hasReported = new AtomicLatch();
+    private RetentionMode                   retentionMode;
 
     /**
      * Creates the tracer and parses the metric input.
@@ -39,6 +39,8 @@ public class ExpressionTracer extends ASingleMetricTracerFactory implements ITim
      */
     public ExpressionTracer(IAgent agent, AttributeListing props, ProbeIdentification probeId, Object target) {
         super(agent, props, probeId, target);
+
+        Module  module = new Module("ExpressionTracer");
         log = new SimpleModuleFeedbackChannel(agent.IAgent_getModuleFeedback(), module.getName());
 
         IndexedProperties   agentProperties = agent.IAgent_getIndexedProperties();
@@ -51,19 +53,19 @@ public class ExpressionTracer extends ASingleMetricTracerFactory implements ITim
         expr   = new ExpressionHolder(metricFullName, expressions);
         log.verbose("Expression = " + expr);
 
-        String   mName           = new DefaultNameFormatter().ICachedNameFormatter_format(expr.getMetricName(), probeId, target);
-        String   type            = getParameterAsString("metricType", "average");
-        boolean  retainLastValue = getParameterAsBoolean("retainLastValue", false);
-        recorder                 = new RecorderFactory().create(getDataAccumulatorFactory(), type, mName);
+        String   mName = new DefaultNameFormatter().ICachedNameFormatter_format(expr.getMetricName(), probeId, target);
+        String   type  = getParameterAsString("metricType", "average");
+        recorder       = new RecorderFactory().create(getDataAccumulatorFactory(), type, mName);
+        retentionMode  = getParameterAsRetentionMode("retain", RetentionMode.none);
 
-        log.info("Created: metric=" + mName + ", type=" + type + ", retainLastValue=" + retainLastValue + ", target=" + target.getClass().getName() + ", expression=" + expr.getExpression());
+        log.info("Created: metric=" + mName + ", type=" + type + ", retain=" + retentionMode + ", target=" + target.getClass().getName() + ", expression=" + expr.getExpression());
         log = new SimpleModuleFeedbackChannel(agent.IAgent_getModuleFeedback(), module.getName() + "#" + mName.replace(' ', '_'));
 
-        if (retainLastValue) {
-            log.info("Starting retention task");
+        if (retentionMode != RetentionMode.none) {
+            log.info("Starting retention task type=" + retentionMode);
             agent.IAgent_getCommonHeartbeat().addBehavior(
-                    this,
-                    module.getName()+"#"+mName,
+                    retentionMode == RetentionMode.zero ? new Zero() : new Last(),
+                    module.getName() + "#" + mName,
                     IntervalHeartbeat.kActive,
                     7500,
                     IntervalHeartbeat.kRunFirst
@@ -71,31 +73,10 @@ public class ExpressionTracer extends ASingleMetricTracerFactory implements ITim
         }
     }
     
-    private Properties  loadExpressions(String filename, File agentDir) {
-        File f = new File(filename);
-        if (!f.isAbsolute()) {
-            f = new File(agentDir, filename);
-        }
-        
-        if (f.canRead()) {
-            try {
-                Properties p = new Properties();
-                InputStream in = new FileInputStream(f);
-                p.load(in);
-                in.close();
-                return p;
-            } catch (Exception e) {
-                log.warn("Failed to read config file: " + f, e);
-            }
-        }
-        
-        return new Properties();
-    }
-
     /**
      * Called before the instrumented method, but not used in this tracer.
-     * @param i
-     * @param data
+     * @param i not used
+     * @param data invocation
      */
     public void ITracer_startTrace(int i, InvocationData data) {
         //do nothing
@@ -118,13 +99,30 @@ public class ExpressionTracer extends ASingleMetricTracerFactory implements ITim
         }
     }
 
-    public void ITimestampedRunnable_execute(long l) {
-        log.verbose("RetainTask: ENTER");
-        if (hasReported.isSet()) return;
-
-        log.verbose("RetainTask: ADD LAST VALUE = " + recorder.getLast());
-        recorder.addLast();
+    /**
+     * Retention task that sends the value 0, in the absence of a real metric value.
+     */
+    class Zero implements ITimestampedRunnable {
+        public void ITimestampedRunnable_execute(long l) {
+            if (hasReported.isSet()) return;
+            log.verbose("[Retention Heartbeat ZERO] value=0");
+            recorder.add(0);
+        }
     }
+
+    /**
+     * Retention task that sends the last recorded value, in the absence of a real metric value.
+     * N.B. it's not the last averaged value.
+     */
+    class Last implements ITimestampedRunnable {
+        public void ITimestampedRunnable_execute(long l) {
+            if (hasReported.isSet()) return;
+            Object last = recorder.getLast();
+            log.verbose("[Retention Heartbeat LAST] value="+ last);
+            recorder.add(last);
+        }
+    }
+    
 
     /**
      * Returns the already created metric object.
@@ -133,6 +131,27 @@ public class ExpressionTracer extends ASingleMetricTracerFactory implements ITim
      */
     protected IDataAccumulator createDataAccumulator(String metricName) {
          return null;
+    }
+
+    private Properties  loadExpressions(String filename, File agentDir) {
+        File f = new File(filename);
+        if (!f.isAbsolute()) {
+            f = new File(agentDir, filename);
+        }
+
+        if (f.canRead()) {
+            try {
+                Properties p = new Properties();
+                InputStream in = new FileInputStream(f);
+                p.load(in);
+                in.close();
+                return p;
+            } catch (Exception e) {
+                log.warn("Failed to read config file: " + f, e);
+            }
+        }
+
+        return new Properties();
     }
 
     protected String   getParameterAsString(String name, String defaultValue) {
@@ -147,6 +166,18 @@ public class ExpressionTracer extends ASingleMetricTracerFactory implements ITim
         if (StringUtils.isEmpty(value)) return defaultValue;
 
         return value.equalsIgnoreCase("true");
+    }
+
+    protected RetentionMode getParameterAsRetentionMode(String name, RetentionMode defaultValue) {
+        String  value = this.getParameter(name);
+        if (StringUtils.isEmpty(value)) return defaultValue;
+
+        try {
+            return RetentionMode.valueOf(value);
+        } catch (IllegalArgumentException e) {
+            log.warn("Illegal value of tracer configuration parameter 'retain'. Got value '"+name+"'. Choose one of none|zero|last");
+            return defaultValue;
+        }
     }
 
 }
