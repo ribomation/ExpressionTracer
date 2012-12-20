@@ -3,7 +3,7 @@ package com.ribomation.expression_tracer;
 import java.io.Serializable;
 
 /**
- * DESCRIPTION
+ * Set of various aggregation methods exposed to the OGNL expressions. 
  * <p/>
  * User: Jens
  * Date: 2011-11-30, 15:51

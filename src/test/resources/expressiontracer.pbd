@@ -3,6 +3,9 @@ InstrumentPoint: AgentInitialization
 SetTracerClassMapping:  ET_avg     com.ribomation.expression_tracer.ExpressionTracer  com.wily.introscope.probebuilder.validate.MetricNameValidator
 SetTracerParameter:     ET_avg     metricType     average
 
+SetTracerClassMapping:  ET_cnt     com.ribomation.expression_tracer.ExpressionTracer  com.wily.introscope.probebuilder.validate.MetricNameValidator
+SetTracerParameter:     ET_cnt     metricType     counter
+
 SetTracerClassMapping:  ET_sum     com.ribomation.expression_tracer.ExpressionTracer  com.wily.introscope.probebuilder.validate.MetricNameValidator
 SetTracerParameter:     ET_sum     metricType     sum
 
@@ -15,26 +18,27 @@ SetTracerParameter:     ET_text     metricType     text
 
 SetTracerClassMapping:  ET_retain_none   com.ribomation.expression_tracer.ExpressionTracer  com.wily.introscope.probebuilder.validate.MetricNameValidator
 SetTracerParameter:     ET_retain_none   metricType     average
-SetTracerParameter:     ET_retain_none   retain         none
+SetTracerParameter:     ET_retain_none   retentionMode  none
 
 SetTracerClassMapping:  ET_retain_zero   com.ribomation.expression_tracer.ExpressionTracer  com.wily.introscope.probebuilder.validate.MetricNameValidator
 SetTracerParameter:     ET_retain_zero   metricType     average
-SetTracerParameter:     ET_retain_zero   retain         zero
+SetTracerParameter:     ET_retain_zero   retentionMode  zero
 
 SetTracerClassMapping:  ET_retain_last   com.ribomation.expression_tracer.ExpressionTracer  com.wily.introscope.probebuilder.validate.MetricNameValidator
 SetTracerParameter:     ET_retain_last   metricType     average
-SetTracerParameter:     ET_retain_last   retain         last
+SetTracerParameter:     ET_retain_last   retentionMode  last
 
 
-TraceOneMethodWithParametersOfClass:   target.Application  compute    ET_avg     "ExpressionTracer|Number:Average=this.getNumber()"
-TraceOneMethodWithParametersOfClass:   target.Application  compute    ET_sum     "ExpressionTracer|Number:Sum=this.getNumber()"
-TraceOneMethodWithParametersOfClass:   target.Application  compute    ET_last    "ExpressionTracer|Number:Last=this.getNumber()"
-TraceOneMethodWithParametersOfClass:   target.Application  getNumber   ET_avg    "ExpressionTracer|Number:Return=$0"
+TraceOneMethodWithParametersOfClass:   target.Application  compute    ET_avg     "ExpressionTracer Demo|Metric Type:Average=this.getNumber()"
+TraceOneMethodWithParametersOfClass:   target.Application  compute    ET_cnt     "ExpressionTracer Demo|Metric Type:Counter=this.getNumber()"
+TraceOneMethodWithParametersOfClass:   target.Application  compute    ET_sum     "ExpressionTracer Demo|Metric Type:Sum=this.getNumber()"
+TraceOneMethodWithParametersOfClass:   target.Application  compute    ET_last    "ExpressionTracer Demo|Metric Type:Last=this.getNumber()"
 
-TraceOneMethodWithParametersOfClass:   target.Application  compute    ET_avg     "ExpressionTracer|List:Size (avg)=$1.size()"
-TraceOneMethodWithParametersOfClass:   target.Application  print      ET_text    "ExpressionTracer|Print:Message=$1"
 
-TraceOneMethodWithParametersOfClass:   target.Application  whatever   ET_retain_none  "ExpressionTracer|Whatever:Retain NONE=$1.intValue()"
-TraceOneMethodWithParametersOfClass:   target.Application  whatever   ET_retain_zero  "ExpressionTracer|Whatever:Retain ZERO=$1.intValue()"
-TraceOneMethodWithParametersOfClass:   target.Application  whatever   ET_retain_last  "ExpressionTracer|Whatever:Retain LAST=$1.intValue()"
+TraceOneMethodWithParametersOfClass:   target.Application  print      ET_text    "ExpressionTracer Demo|Misc:Text Data=$1"
+TraceOneMethodWithParametersOfClass:   target.Application  getNumber  ET_avg     "ExpressionTracer Demo|Misc:Return Value=$0"
+TraceOneMethodWithParametersOfClass:   target.Application  compute    ET_avg     "ExpressionTracer Demo|Misc:Parameter Value=$1.size()"
 
+TraceOneMethodWithParametersOfClass:   target.Application  whatever   ET_retain_none  "ExpressionTracer Demo|Retention Mode:NONE=$1.intValue()"
+TraceOneMethodWithParametersOfClass:   target.Application  whatever   ET_retain_zero  "ExpressionTracer Demo|Retention Mode:ZERO=$1.intValue()"
+TraceOneMethodWithParametersOfClass:   target.Application  whatever   ET_retain_last  "ExpressionTracer Demo|Retention Mode:LAST=$1.intValue()"

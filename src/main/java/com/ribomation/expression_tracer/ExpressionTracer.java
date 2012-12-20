@@ -24,6 +24,10 @@ import java.util.Properties;
  * any of its method arguments or return value.
  */
 public class ExpressionTracer extends ASingleMetricTracerFactory {
+    private static final String EXPRESSION_TRACER = "ExpressionTracer";
+    private static final String EXPRESSION_TRACER_FILE = "ExpressionTracer.file";
+    private static final String METRIC_TYPE = "metricType";
+    private static final String RETENTION_MODE = "retentionMode";
     private IModuleFeedbackChannel          log;
     private ExpressionHolder                expr;
     private Recorder                        recorder;
@@ -39,38 +43,44 @@ public class ExpressionTracer extends ASingleMetricTracerFactory {
      */
     public ExpressionTracer(IAgent agent, AttributeListing props, ProbeIdentification probeId, Object target) {
         super(agent, props, probeId, target);
-
-        Module  module = new Module("ExpressionTracer");
-        log = new SimpleModuleFeedbackChannel(agent.IAgent_getModuleFeedback(), module.getName());
+        log = new SimpleModuleFeedbackChannel(agent.IAgent_getModuleFeedback(), EXPRESSION_TRACER);
+        log.verbose("Initializing");
 
         IndexedProperties   agentProperties = agent.IAgent_getIndexedProperties();
-        String              expressionsFilename = agentProperties.getTrimmedProperty("ExpressionTracer.file", "ExpressionTracer.properties");
+        String              expressionsFilename = agentProperties.getTrimmedProperty(EXPRESSION_TRACER_FILE, "ExpressionTracer.properties");
         File                agentDir = new File( agent.IAgent_getConfigurationResource().IResource_getLocation() ).getParentFile();
         Properties          expressions = loadExpressions(expressionsFilename, agentDir);
 
-        String metricFullName = getNameParameter();
-        log.verbose("Input = " + metricFullName);
-        expr   = new ExpressionHolder(metricFullName, expressions);
-        log.verbose("Expression = " + expr);
+        String rawMetricDefinition = getNameParameter();
+        log.verbose("Raw metric string = " + rawMetricDefinition);
+        
+        expr   = new ExpressionHolder(rawMetricDefinition, expressions);
+        log.verbose("Extracted expression = " + expr);
 
-        String   mName = new DefaultNameFormatter().ICachedNameFormatter_format(expr.getMetricName(), probeId, target);
-        String   type  = getParameterAsString("metricType", "average");
-        recorder       = new RecorderFactory().create(getDataAccumulatorFactory(), type, mName);
-        retentionMode  = getParameterAsRetentionMode("retain", RetentionMode.none);
+        String     metricName = new DefaultNameFormatter().ICachedNameFormatter_format(expr.getMetricName(), probeId, target);
+        log.verbose("Metric Name = " + metricName);
+        
+        MetricType metricType  = getParameterAsMetricType(METRIC_TYPE, MetricType.average);
+        log.verbose("Metric Type = " + metricType);
 
-        log.info("Created: metric=" + mName + ", type=" + type + ", retain=" + retentionMode + ", target=" + target.getClass().getName() + ", expression=" + expr.getExpression());
-        log = new SimpleModuleFeedbackChannel(agent.IAgent_getModuleFeedback(), module.getName() + "#" + mName.replace(' ', '_'));
+        retentionMode = getParameterAsRetentionMode(RETENTION_MODE, RetentionMode.none);
+        log.verbose("Retention Mode = " + retentionMode);
 
+        recorder = new RecorderFactory().create(getDataAccumulatorFactory(), metricType, metricName);
+        
         if (retentionMode != RetentionMode.none) {
-            log.info("Starting retention task type=" + retentionMode);
+            log.verbose("Starting retention task type=" + retentionMode);
             agent.IAgent_getCommonHeartbeat().addBehavior(
                     retentionMode == RetentionMode.zero ? new Zero() : new Last(),
-                    module.getName() + "#" + mName,
+                    EXPRESSION_TRACER + "#HeartBeat#" + metricName,
                     IntervalHeartbeat.kActive,
                     7500,
                     IntervalHeartbeat.kRunFirst
             );
         }
+
+        log.info("Created: metricName=" + metricName + ", metricType=" + metricType + ", retentionMode=" + retentionMode + ", target=" + target.getClass().getName() + ", expression=" + expr.getExpression());
+        log = new SimpleModuleFeedbackChannel(agent.IAgent_getModuleFeedback(), EXPRESSION_TRACER + "#" + metricName.replace(' ', '_'));
     }
     
     /**
@@ -176,6 +186,18 @@ public class ExpressionTracer extends ASingleMetricTracerFactory {
             return RetentionMode.valueOf(value);
         } catch (IllegalArgumentException e) {
             log.warn("Illegal value of tracer configuration parameter 'retain'. Got value '"+name+"'. Choose one of none|zero|last");
+            return defaultValue;
+        }
+    }
+    
+    protected MetricType getParameterAsMetricType(String name, MetricType defaultValue) {
+        String  value = this.getParameter(name);
+        if (StringUtils.isEmpty(value)) return defaultValue;
+
+        try {
+            return MetricType.valueOf(value);
+        } catch (IllegalArgumentException e) {
+            log.warn("Illegal value of tracer configuration parameter 'metric'. Got value '"+name+"'. Choose one of average|counter|last|sum|text");
             return defaultValue;
         }
     }

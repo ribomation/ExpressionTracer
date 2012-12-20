@@ -21,7 +21,7 @@ import java.util.Properties;
  * <p>
  * The invocation target can be either of
  * <ul>
- *   <li>this - the intrumented object itself</li>
+ *   <li>this - the instrumented object itself</li>
  *   <li>$1, $2, ... - an argument object of the instrumented method</li>
  *   <li>$0 - the returned value from the method</li>
  * </ul>
@@ -39,19 +39,20 @@ public class ExpressionHolder {
     private String                  expression;
     private int                     targetIdx;
     private Object                  ognlExpr;
-//    private Properties              externalExpression = new Properties();
 
     /**
      * Do nothing constructor for unit testing.
      */
-    protected ExpressionHolder() {
-    }
+    protected ExpressionHolder() { }
 
+    /**
+     * Parses and creates an expression.
+     * @param metricName        input metric string
+     * @param expressions       Possibly non-empty bucket of external expressions
+     */
     public ExpressionHolder(String metricName, Properties expressions) {
         this.metricName = metricName;
-//        this.externalExpression = cfg;
 
-        // name=expr
         String[]    comps = metricName.split(METRIC_SEP, 2);
         if (comps.length != 2) throw new InvalidExpression(metricName);
         this.metricName = comps[0];
@@ -62,13 +63,8 @@ public class ExpressionHolder {
             if (expressions.containsKey(exprName)) {
                 this.expression = expressions.getProperty(exprName);
             }
-//            String expr = externalExpression.getProperty(exprName);
-//            if (expr != null) {
-//                this.expression = expr;
-//            }
         }
 
-        // $0.getValue()
         comps = this.expression.split(TARGET_SEP, 2);
         if (comps.length != 2 && comps.length != 1) throw new InvalidExpression(metricName);
         this.targetIdx  = getTargetIndex(comps[0]);
