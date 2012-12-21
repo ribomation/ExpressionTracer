@@ -8,6 +8,7 @@ import java.util.Random;
 /**
  * Application for functional testing.
  */
+@Deprecated
 public class Application {
     public static void main(String[] args) {
         Application app = new Application(args);
@@ -37,6 +38,7 @@ public class Application {
         }
     }
 
+    @SuppressWarnings("unchecked")
     public void     compute(List lst) {
         Integer  num = getNumber();
         lst.add(num);
@@ -48,11 +50,11 @@ public class Application {
     }
 
     public void     print(String msg) {
-        System.out.println("[target.Application] " + msg);
+        System.out.println("[Application] " + msg);
     }
 
     public void     whatever(Integer n) {
-        System.out.println("[target.Application#whatever()] n=" + n);
+        System.out.println("[Application#whatever()] n=" + n);
     }
 
     public Integer     getNumber() {

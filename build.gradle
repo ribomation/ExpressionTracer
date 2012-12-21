@@ -1,0 +1,151 @@
+
+// --------------------------------------------
+// Configuration (edit here)
+// --------------------------------------------
+
+// path to dir with unpacked agent (version 8.x)
+ext.agentDir = 'C:/Tools/Introscope/Agent-8.2.4'
+
+// ---DO NOT EDIT BELOW------------------------
+
+apply plugin: 'java'
+
+version = '1.5'
+ext {
+    authorName = 'Jens Riboe'
+    authorEmail = 'jens.riboe@ribomation.com'
+    authorUrl = 'http://blog.ribomation.com/'
+    authorOrg = 'Ribomation AB'
+    entryClass = 'com.ribomation.expression_tracer.ExpressionTracer'
+    javaVersion = 5
+    functestDir = "${buildDir}/functional-test"
+}
+
+sourceSets {
+    functionalTest
+}
+
+sourceCompatibility = javaVersion
+targetCompatibility = javaVersion
+
+project.tasks.findAll {it.name =~ /^compile.*Java$/ }.each {
+//    println "Configuring task ${it.name}"
+    it.options.with {
+        encoding = 'UTF-8'
+        warnings = true
+        compilerArgs = ['-Xlint:-options', '-Xlint:unchecked']
+    }
+}
+
+javadoc {
+    title = project.name
+    options.header = "Documention for ${project.name} version ${project.version}"
+    options.footer = "Generated on ${new Date().format('dd MMMM yyyy')}"
+    options.links = ['http://docs.oracle.com/javase/5/docs/api/']
+    options.tags = ['author', 'date']
+}
+
+repositories {
+    mavenCentral()
+    flatDir {
+        dirs agentDir, "${agentDir}/ext"
+    }
+}
+
+dependencies {
+    compile name: 'Agent'
+    compile 'ognl:ognl:2.6.7'
+    testCompile 'junit:junit:3.8.1'
+}
+
+jar {
+    dependsOn configurations.runtime
+    from {
+        configurations.runtime.grep{it.name.contains('ognl')}.collect {it.isDirectory() ? it : zipTree(it)}
+    }
+    
+    manifest {
+        attributes 'Built-By': "Gradle ${gradle.gradleVersion}",
+                'Author-Name': authorName,
+                'Author-Email': authorEmail,
+                'Author-URL': authorUrl,
+                'Author-Organization': authorOrg,
+                'com-wily-Release': version,
+                'com-wily-Build': new Date().format('yyyy-MM-dd HH:mm:ss'),
+                'com-wily-Extension-Name': project.name,
+                'com-wily-Extension-Type': 'Introscope-Agent',
+                'com-wily-Extension-Version': 1,
+                'com-wily-Extension-Plugins-List': 'ET',
+                'com-wily-Extension-Plugin-ET-Name': project.name,
+                'com-wily-Extension-Plugin-ET-Type': 'tracer',
+                'com-wily-Extension-Plugin-ET-Version': 1,
+                'com-wily-Extension-Plugin-ET-Entry-Point-Class': entryClass
+    }
+}
+
+
+// --- Functional Test ---
+// Running an agent with ET
+
+task functestInit() << {
+    file("${functestDir}/agent/ext").mkdirs()
+    file("${functestDir}/agent/logs").mkdirs()
+}
+
+task functestClean(type: Delete) {
+    delete functestDir
+}
+
+task functestJar(type: Jar, dependsOn: functestInit) {
+    description = 'Builds the FT App JAR'
+    def appName = 'TestApplication.jar'
+    def appDir = sourceSets.functionalTest.output
+    def appJar = file("${functestDir}/${appName}")
+    inputs.dir appDir
+    outputs.file appJar
+    
+    archiveName = 'TestApplication.jar'
+    destinationDir = file(functestDir)
+    from appDir
+    manifest {
+        attributes('Main-Class': 'test.Application')
+    }
+}
+
+task functestAgent(type: Copy, dependsOn: functestJar) {
+    description = 'Creates the agent directory'
+    def resDir = sourceSets.functionalTest.resources
+    def agtDir = file("${functestDir}/agent")
+    inputs.dir resDir
+    outputs.dir agtDir
+    
+    from resDir
+    from (agentDir) {
+        include 'Agent.jar'
+        include 'ext/'
+    }
+    into agtDir
+}
+
+task functestTracer(type: Copy, dependsOn: [build, functestAgent]) {
+    description = 'Copies the ET JAR into the agent ext dir'
+    def jarFile = jar.archivePath
+    def extDir = new File("${functestDir}/agent/ext")
+    inputs.file jarFile
+    outputs.dir extDir
+    
+    from jarFile
+    into extDir
+}
+
+task functestRun(type: JavaExec, dependsOn: functestTracer) {
+    inputs.dir file(functestDir)
+    
+    jvmArgs = ["-javaagent:${functestDir}/agent/Agent.jar"]
+    systemProperties = [
+            'com.wily.introscope.agentProfile': "${functestDir}/agent/agent.properties"
+    ]
+    main = '-jar'
+    args = ["${functestDir}/TestApplication.jar"]
+}
+

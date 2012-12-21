@@ -122,6 +122,7 @@ public class ExpressionHolder {
      * @param target    root object
      * @return result
      */
+    @SuppressWarnings("unchecked")
     public Object       eval(Object target) {
         if (target == null) return null;
 

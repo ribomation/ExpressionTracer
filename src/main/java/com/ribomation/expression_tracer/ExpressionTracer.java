@@ -18,21 +18,21 @@ import com.wily.util.properties.IndexedProperties;
 
 import java.io.*;
 import java.util.Properties;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * A tracer that can evaluate an OGNL invocation expression on the instrumented object or
  * any of its method arguments or return value.
  */
 public class ExpressionTracer extends ASingleMetricTracerFactory {
-    private static final String EXPRESSION_TRACER = "ExpressionTracer";
-    private static final String EXPRESSION_TRACER_FILE = "ExpressionTracer.file";
-    private static final String METRIC_TYPE = "metricType";
-    private static final String RETENTION_MODE = "retentionMode";
-    private IModuleFeedbackChannel          log;
-    private ExpressionHolder                expr;
-    private Recorder                        recorder;
-    private AtomicLatch                     hasReported = new AtomicLatch();
-    private RetentionMode                   retentionMode;
+    private static final String EXPRESSION_TRACER       = "ExpressionTracer";
+    private static final String EXPRESSION_TRACER_FILE  = "ExpressionTracer.file";
+    private static final String METRIC_TYPE             = "metricType";
+    private static final String RETENTION_MODE          = "retentionMode";
+    private IModuleFeedbackChannel  log;
+    private ExpressionHolder        expr;
+    private Recorder                recorder;
+    private AtomicBoolean           hasReported = new AtomicBoolean(false);
 
     /**
      * Creates the tracer and parses the metric input.
@@ -63,7 +63,7 @@ public class ExpressionTracer extends ASingleMetricTracerFactory {
         MetricType metricType  = getParameterAsMetricType(METRIC_TYPE, MetricType.average);
         log.verbose("Metric Type = " + metricType);
 
-        retentionMode = getParameterAsRetentionMode(RETENTION_MODE, RetentionMode.none);
+        RetentionMode retentionMode = getParameterAsRetentionMode(RETENTION_MODE, RetentionMode.none);
         log.verbose("Retention Mode = " + retentionMode);
 
         recorder = new RecorderFactory().create(getDataAccumulatorFactory(), metricType, metricName);
@@ -101,7 +101,7 @@ public class ExpressionTracer extends ASingleMetricTracerFactory {
         try {
             Object   valueObject = expr.eval(invocationData);
             recorder.add(valueObject);
-            hasReported.set();
+            hasReported.set(true);
 
             log.verbose("value=" + valueObject);
         } catch (Exception e) {
@@ -114,7 +114,7 @@ public class ExpressionTracer extends ASingleMetricTracerFactory {
      */
     class Zero implements ITimestampedRunnable {
         public void ITimestampedRunnable_execute(long l) {
-            if (hasReported.isSet()) return;
+            if (hasReported.getAndSet(false)) return;
             log.verbose("[Retention Heartbeat ZERO] value=0");
             recorder.add(0);
         }
@@ -126,7 +126,7 @@ public class ExpressionTracer extends ASingleMetricTracerFactory {
      */
     class Last implements ITimestampedRunnable {
         public void ITimestampedRunnable_execute(long l) {
-            if (hasReported.isSet()) return;
+            if (hasReported.getAndSet(false)) return;
             Object last = recorder.getLast();
             log.verbose("[Retention Heartbeat LAST] value="+ last);
             recorder.add(last);
@@ -143,7 +143,7 @@ public class ExpressionTracer extends ASingleMetricTracerFactory {
          return null;
     }
 
-    private Properties  loadExpressions(String filename, File agentDir) {
+    protected Properties  loadExpressions(String filename, File agentDir) {
         File f = new File(filename);
         if (!f.isAbsolute()) {
             f = new File(agentDir, filename);
