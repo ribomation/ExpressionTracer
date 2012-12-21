@@ -9,6 +9,7 @@ ext.agentDir = 'C:/Tools/Introscope/Agent-8.2.4'
 // ---DO NOT EDIT BELOW------------------------
 
 apply plugin: 'java'
+apply plugin: 'project-report'
 
 version = '1.5'
 ext {
@@ -56,6 +57,17 @@ dependencies {
     compile name: 'Agent'
     compile 'ognl:ognl:2.6.7'
     testCompile 'junit:junit:3.8.1'
+}
+
+task dist(type: Zip, dependsOn: jar) {
+    classifier = 'bin'
+    from jar.archivePath
+    from sourceSets.functionalTest.resources
+    from file('README.md')
+}
+
+artifacts {
+    archives dist
 }
 
 jar {

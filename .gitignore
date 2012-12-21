@@ -1,4 +1,6 @@
 target/
+.gradle/
+build/
 *.iml
 *.ipr
 *.iws
