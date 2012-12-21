@@ -1,5 +1,5 @@
 Background
-===============
+==========
 
 ExpressionTracer is a CA-WIly Introscope tracer-type agent extension that can evaluate [OGNL](http://commons.apache.org/ognl/index.html) invocation expressions on an instrumented target object or any of its method arguments or return value.
 
@@ -14,7 +14,7 @@ This library has been developed and tested using Introscope version 8
 
 
 Installation and Configuration
-============
+==============================
 
 Overview
 --------
@@ -26,7 +26,7 @@ Overview
 
 
 Logical Tracer Names
------------------
+--------------------
 
 Before ExpressionTracer (ET) can be used for instrumentation, at least one configuration (_logical tracer name_) must be created within a PBD file. After that it can be used to define instrumentation actions and metrics, preferably in the same PBD file.
 
@@ -61,7 +61,7 @@ The retentionMode parameter value can one of
 (_IMP = Introscope Measurement Period = 15s_)
 
 Expression Metric Definitions
-------------------
+-----------------------------
 Based on one or more logical tracer names, one can create instrumentation points, i.e. expression metric definitions. Here are some sample definitions.
 
 ```
@@ -134,3 +134,40 @@ TraceOneMethodWithParametersOfClass:   se.nordicedge.CertificateParser  getCATyp
 TraceOneMethodWithParametersOfClass:   se.nordicedge.CertificateParser  getCAType    ExpressionTracer_Counter     "NordicEdge|Cert Issuer:Other=@other"
 ```
 
+Building this Agent Extension
+=============================
+
+The build tool used is [Gradle](http://www.gradle.org). 
+
+Before running the first Gradle command, the `build.gradle` file must be edited. Change the following property to point to an unpacked Introscope Agent (version 8.x).
+
+```
+ext.agentDir = 'C:/Tools/Introscope/Agent-8.2.4'
+```
+
+After the latest version of Gradle have been installed, the following commands are of primary interest
+
+How to build the agent extension JAR
+------------------------------------
+
+```
+ gradle build
+```
+
+The agent-extension JAR will be located in the `./build/libs/` directory. In addition, the distribution ZIP containing the extension JAR and sample PBD, will be located in the `./build/distributions/` directory.
+
+How to run the functional test
+------------------------------
+
+```
+ gradle functestRun
+```
+
+This will build the sample `test.Application`, configure an Introscope agent and run the instrumented program. Based on the agent logs, one can follow the actions of the expression-tracer.
+
+How to remove the all generated files
+------------------------------------
+
+```
+ gradle clean
+```

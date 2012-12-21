@@ -11,7 +11,7 @@ ext.agentDir = 'C:/Tools/Introscope/Agent-8.2.4'
 apply plugin: 'java'
 apply plugin: 'project-report'
 
-version = '1.5'
+version = '1.6'
 ext {
     authorName = 'Jens Riboe'
     authorEmail = 'jens.riboe@ribomation.com'
