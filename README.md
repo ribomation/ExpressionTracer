@@ -58,7 +58,7 @@ The retentionMode parameter value can one of
 <tr> <td><code>last</code> </td>          <td>Report the last collected value, if no data collected within an IMP</td> </tr>
 </table>
 
-(_IMP = Introscope Measurement Period = 15s_)
+(IMP = Introscope Measurement Period = 15s)
 
 Expression Metric Definitions
 -----------------------------
@@ -154,7 +154,8 @@ How to build the agent extension JAR
  gradle build
 ```
 
-The agent-extension JAR will be located in the `./build/libs/` directory. In addition, the distribution ZIP containing the extension JAR and sample PBD, will be located in the `./build/distributions/` directory.
+* The agent-extension JAR will be located in the `./build/libs/` directory. 
+* In addition, the distribution ZIP containing the extension JAR and sample PBD, will be located in the `./build/distributions/` directory.
 
 How to run the functional test
 ------------------------------
@@ -165,7 +166,7 @@ How to run the functional test
 
 This will build the sample `test.Application`, configure an Introscope agent and run the instrumented program. Based on the agent logs, one can follow the actions of the expression-tracer.
 
-How to remove the all generated files
+How to remove all generated files
 ------------------------------------
 
 ```
